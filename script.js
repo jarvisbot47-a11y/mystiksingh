@@ -137,67 +137,21 @@ gsap.registerPlugin(ScrollTrigger);
   // Extruded text layers (creates depth illusion)
   const loader = new THREE.TextureLoader();
   loader.load(
-    'text-only-logo.png',
+    'logo-3d.png',
     (tex) => {
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
-      tex.format = THREE.RGBAFormat;
 
-      const aspect = 497 / 309; // from our generated image
+      // Detect aspect from natural dimensions if possible
+      const aspect = tex.image ? tex.image.width / tex.image.height : (497 / 309);
 
-      // Build layered planes (8 layers for depth)
-      const layerCount = 9;
-      for (let i = 0; i < layerCount; i++) {
-        const t_norm = i / (layerCount - 1); // 0 = back, 1 = front
-        const z = -DEPTH * (1 - t_norm) * 1.2;
-        const scale = 1.0 + t_norm * 0.0;
+      // Main logo plane — the image IS the 3D render, just display it
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+      const geo = new THREE.PlaneGeometry(aspect * 2.5, 2.5);
+      const mesh = new THREE.Mesh(geo, mat);
+      group.add(mesh);
 
-        let mat;
-        if (i === layerCount - 1) {
-          // Front layer — full color
-          mat = new THREE.MeshStandardMaterial({
-            map: tex,
-            transparent: true,
-            alphaTest: 0.01,
-            emissive: new THREE.Color(TAN).multiplyScalar(0.08),
-            emissiveIntensity: 0.5,
-            roughness: 0.4,
-            metalness: 0.15,
-            side: THREE.DoubleSide,
-          });
-        } else {
-          // Shadow layers behind — darkening
-          const darkness = 0.15 + t_norm * 0.5;
-          mat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            transparent: true,
-            opacity: darkness,
-            alphaTest: 0.01,
-            blending: THREE.NormalBlending,
-            depthWrite: false,
-          });
-        }
-
-        const geo = new THREE.PlaneGeometry(aspect * 2.5, 2.5 * scale);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.z = z;
-        group.add(mesh);
-      }
-
-      // Front glass sheen
-      const sheenMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.04,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      const sheenGeo = new THREE.PlaneGeometry(aspect * 2.5, 2.5);
-      const sheen = new THREE.Mesh(sheenGeo, sheenMat);
-      sheen.position.z = 0.02;
-      group.add(sheen);
-
-      // Outer glow ring
+      // Glow ring behind
       const ringGeo = new THREE.TorusGeometry(1.6, 0.035, 8, 80);
       const ringMat = new THREE.MeshBasicMaterial({
         color: PURPLE,
