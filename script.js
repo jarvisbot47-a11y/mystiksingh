@@ -80,18 +80,28 @@ function _initParticles() {
   if (!canvas) return;
   const container = document.getElementById('heroLogo3D');
   if (!container) return;
+  // Init immediately on load, don't lazy wait
+  if (document.readyState === 'complete') {
+    setTimeout(_initLogo3D, 0);
+  } else {
+    window.addEventListener('load', () => setTimeout(_initLogo3D, 0));
+  }
+  // Also try IntersectionObserver as backup
   const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
       observer.disconnect();
       _initLogo3D();
     }
-  }, { threshold: 0.1 });
+  }, { threshold: 0.01 });
   observer.observe(canvas);
+  // Fallback: init after 3s no matter what
+  setTimeout(() => { observer.disconnect(); _initLogo3D(); }, 3000);
 })();
 
 function _initLogo3D() {
   const canvas = document.getElementById('hero-logo-canvas');
-  if (!canvas || !window.THREE) return;
+  const container = document.getElementById('heroLogo3D');
+  if (!canvas || !window.THREE || !container) return;
 
   const w = container.clientWidth || 500;
   const h = container.clientHeight || 500;
