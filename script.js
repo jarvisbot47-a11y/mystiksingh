@@ -17,21 +17,33 @@ const CITIES = [
 ];
 
 // ─── Register GSAP Plugins ───
-gsap.registerPlugin(ScrollTrigger);
+if (window.gsap) gsap.registerPlugin(ScrollTrigger);
 
 // ══════════════════════════════════════════════════════════════════
-// 1. THREE.JS BACKGROUND PARTICLE FIELD
+// 1. THREE.JS BACKGROUND PARTICLE FIELD — lazy init on visible
 // ══════════════════════════════════════════════════════════════════
 (function initBackgroundParticles() {
   const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && window.THREE) {
+      observer.disconnect();
+      _initParticles();
+    }
+  }, { threshold: 0.1 });
+  observer.observe(canvas);
+})();
+
+function _initParticles() {
+  const canvas = document.getElementById('bg-canvas');
   if (!canvas || !window.THREE) return;
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.z = 5;
-  const particleCount = 400;
+  const particleCount = 200; // reduced for performance
   const positions = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount; i++) {
     positions[i*3]   = (Math.random()-0.5)*20;
@@ -40,7 +52,7 @@ gsap.registerPlugin(ScrollTrigger);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const mat = new THREE.PointsMaterial({ size: 0.04, color: 0xc084fc, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+  const mat = new THREE.PointsMaterial({ size: 0.06, color: 0xc084fc, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
   const particles = new THREE.Points(geo, mat);
   scene.add(particles);
   let mouseX=0, mouseY=0, targetX=0, targetY=0;
@@ -54,25 +66,32 @@ gsap.registerPlugin(ScrollTrigger);
     camera.position.x+=(targetX*0.5-camera.position.x)*0.05;
     camera.position.y+=(targetY*0.5-camera.position.y)*0.05;
     camera.lookAt(scene.position);
-    particles.rotation.y+=0.0003; particles.rotation.x+=0.0001;
-    const pos = particles.geometry.attributes.position.array;
-    for(let i=0;i<particleCount;i++) pos[i*3+1]+=Math.sin(t+i*0.1)*0.0005;
-    particles.geometry.attributes.position.needsUpdate=true;
+    particles.rotation.y+=0.0003;
     renderer.render(scene, camera);
   }
   animate();
-})();
+}
 
 // ══════════════════════════════════════════════════════════════════
-// 2. 3D AVATAR — Head tracking with mouse + optional gyroscope
-// ══════════════════════════════════════════════════════════════════
-// 3. HERO LOGO — 3D text with depth layers
+// 2. HERO LOGO — lazy init when visible
 // ══════════════════════════════════════════════════════════════════
 (function initLogo3D() {
   const canvas = document.getElementById('hero-logo-canvas');
-  if (!canvas || !window.THREE) return;
+  if (!canvas) return;
   const container = document.getElementById('heroLogo3D');
   if (!container) return;
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      observer.disconnect();
+      _initLogo3D();
+    }
+  }, { threshold: 0.1 });
+  observer.observe(canvas);
+})();
+
+function _initLogo3D() {
+  const canvas = document.getElementById('hero-logo-canvas');
+  if (!canvas || !window.THREE) return;
 
   const w = container.clientWidth || 500;
   const h = container.clientHeight || 500;
