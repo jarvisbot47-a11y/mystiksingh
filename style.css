@@ -68,10 +68,6 @@ img { display: block; max-width: 100%; }
   z-index: 1;
   pointer-events: none;
 }
-#hero-logo-canvas {
-  width: 100%;
-  height: 100%;
-}
 
 /* ─── Light Blobs ─── */
 .light-blob {
@@ -314,14 +310,34 @@ img { display: block; max-width: 100%; }
   text-transform: uppercase;
   color: var(--text-3);
 }
-.hero-logo-3d {
-  width: clamp(280px, 50vw, 600px);
-  height: clamp(280px, 50vw, 600px);
-  margin: 0 auto 32px;
+.hero-logo-wrap {
+  width: clamp(260px, 45vw, 500px);
+  margin: 0 auto 40px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   transform: translateY(30px);
   animation: fadeUp 0.9s 0.5s var(--ease) forwards;
+}
+.logo-glow-orb {
+  position: absolute;
+  width: 80%;
+  padding-bottom: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192,132,252,0.35) 0%, rgba(124,58,237,0.15) 40%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+.hero-logo-img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.15s ease-out;
+  filter: drop-shadow(0 0 30px rgba(192,132,252,0.3));
 }
 .hero-tagline {
   display: flex;

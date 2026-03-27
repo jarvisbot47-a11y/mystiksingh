@@ -66,265 +66,33 @@ gsap.registerPlugin(ScrollTrigger);
 // ══════════════════════════════════════════════════════════════════
 // 2. 3D AVATAR — Head tracking with mouse + optional gyroscope
 // ══════════════════════════════════════════════════════════════════
-(function init3DAvatar() {
-  const canvas = document.getElementById('hero-logo-canvas');
-  if (!canvas || !window.THREE) return;
-  const container = document.getElementById('heroLogo3D');
-  if (!container) return;
+// 3. HERO LOGO — Clean glow animation
+// ══════════════════════════════════════════════════════════════════
+(function initHeroLogo() {
+  const logoWrap = document.getElementById('heroLogoWrap');
+  if (!logoWrap) return;
 
-  const w = container.clientWidth;
-  const h = container.clientHeight;
-  canvas.width = w; canvas.height = h;
-
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
-  renderer.setSize(w, h);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x000000, 0);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
-  camera.position.z = 5;
-
-  // Ambient light
-  const ambientLight = new THREE.AmbientLight(0x7c3aed, 0.4);
-  scene.add(ambientLight);
-  const spotLight = new THREE.SpotLight(0x4fc3f7, 2.0, 20, Math.PI/6, 0.5, 1);
-  spotLight.position.set(2, 3, 4);
-  scene.add(spotLight);
-  const blueLight = new THREE.PointLight(0x1565c0, 1.5, 15);
-  blueLight.position.set(-3, -1, 2);
-  scene.add(blueLight);
-  const rimLight = new THREE.PointLight(0xc084fc, 0.8, 10);
-  rimLight.position.set(0, 2, -3);
-  scene.add(rimLight);
-
-  // ── Avatar Group ──
-  const avatarGroup = new THREE.Group();
-  scene.add(avatarGroup);
-
-  // Load all concert photos as potential textures
-  const textureLoader = new THREE.TextureLoader();
-  const photoPaths = [
-    'concert-1.jpg','concert-2.jpg','concert-3.jpg','concert-4.jpg',
-    'concert-5.jpg','concert-6.jpg','concert-7.jpg','concert-8.jpg',
-    'concert-9.jpg','concert-10.jpg','concert-11.jpg','concert-12.jpg','concert-13.jpg'
-  ];
-  // Concert photos are in the concert-photos/ folder (relative to site root)
-  const textureBase = 'concert-photos/';
-
-  // Build 3D head from sphere geometry (stylized bust)
-  const headRadius = 1.2;
-  const headGeo = new THREE.SphereGeometry(headRadius, 64, 64);
-  // Distort to more head-like shape
-  const headPositions = headGeo.attributes.position;
-  for (let i = 0; i < headPositions.count; i++) {
-    let x = headPositions.getX(i);
-    let y = headPositions.getY(i);
-    let z = headPositions.getZ(i);
-    // Stretch vertically slightly
-    y *= 1.15;
-    // Flatten sides slightly for jaw
-    if (y < 0) {
-      x *= 0.88;
-      z *= 0.88;
-    }
-    // Add brow ridge
-    if (y > 0.4 && y < 0.9 && z > 0) {
-      z += 0.08;
-    }
-    headPositions.setXYZ(i, x, y, z);
-  }
-  headGeo.computeVertexNormals();
-
-  // Load primary texture (front-facing concert photo)
-  let primaryTex = null;
-  let loadedCount = 0;
-  const totalTex = 1;
-
-  textureLoader.load(
-    textureBase + 'concert-1.jpg',
-    (tex) => {
-      tex.minFilter = THREE.LinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.format = THREE.RGBAFormat;
-      primaryTex = tex;
-      loadedCount++;
-      applyTexture();
-    },
-    undefined,
-    () => {
-      // Fallback — no texture
-      loadedCount++;
-      console.warn('Avatar texture failed to load — using procedural material');
-    }
-  );
-
-  function applyTexture() {
-    if (!primaryTex) return;
-
-    // Create a custom shader material for the head
-    const headMat = new THREE.MeshPhysicalMaterial({
-      map: primaryTex,
-      transparent: true,
-      opacity: 0.95,
-      roughness: 0.35,
-      metalness: 0.05,
-      envMapIntensity: 0.5,
-    });
-    const headMesh = new THREE.Mesh(headGeo, headMat);
-    headMesh.position.y = 0.1;
-    avatarGroup.add(headMesh);
-
-    // Add shoulders/body hint
-    const bodyGeo = new THREE.CylinderGeometry(1.0, 0.6, 1.4, 32, 1, false, 0, Math.PI);
-    const bodyMat = new THREE.MeshPhysicalMaterial({
-      map: primaryTex,
-      transparent: true,
-      opacity: 0.6,
-      roughness: 0.5,
-    });
-    const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-    bodyMesh.position.y = -1.4;
-    bodyMesh.rotation.x = Math.PI / 2;
-    avatarGroup.add(bodyMesh);
-
-    // Spotlight cone (visible light beam above head)
-    const coneGeo = new THREE.ConeGeometry(0.8, 3, 32, 1, true);
-    const coneMat = new THREE.MeshBasicMaterial({
-      color: 0x1565c0,
-      transparent: true,
-      opacity: 0.04,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    const cone = new THREE.Mesh(coneGeo, coneMat);
-    cone.position.y = 2.2;
-    avatarGroup.add(cone);
-
-    // Floor glow
-    const floorGeo = new THREE.CircleGeometry(1.5, 64);
-    const floorMat = new THREE.MeshBasicMaterial({
-      color: 0x1565c0,
-      transparent: true,
-      opacity: 0.15,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -2.1;
-    avatarGroup.add(floor);
-
-    // Glow ring around base
-    const ringGeo = new THREE.TorusGeometry(1.2, 0.03, 16, 100);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xc084fc,
-      transparent: true,
-      opacity: 0.5,
-      blending: THREE.AdditiveBlending,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = -2.08;
-    avatarGroup.add(ring);
-
-    // Second ring
-    const ring2Geo = new THREE.TorusGeometry(1.5, 0.015, 16, 100);
-    const ring2Mat = new THREE.MeshBasicMaterial({
-      color: 0x7c3aed,
-      transparent: true,
-      opacity: 0.3,
-      blending: THREE.AdditiveBlending,
-    });
-    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-    ring2.rotation.x = Math.PI / 2;
-    ring2.position.y = -2.08;
-    avatarGroup.add(ring2);
-  }
-
-  // ─── Mouse / Gyroscope tracking ───
-  let targetRotX = 0, targetRotY = 0;
-  let currentRotX = 0, currentRotY = 0;
-  let gyroEnabled = false;
-
-  // Mouse control
-  document.addEventListener('mousemove', (e) => {
-    if (gyroEnabled) return;
-    const dx = (e.clientX / window.innerWidth - 0.5) * 2;
-    const dy = (e.clientY / window.innerHeight - 0.5) * 2;
-    targetRotY = dx * 0.6;
-    targetRotX = -dy * 0.4;
-  });
-
-  // Gyroscope / device orientation (mobile)
-  function enableGyro() {
-    if (gyroEnabled) return;
-    gyroEnabled = true;
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', (e) => {
-        if (e.gamma !== null && e.beta !== null) {
-          targetRotY = (e.gamma / 45) * 0.6;   // left-right tilt
-          targetRotX = -((e.beta - 45) / 45) * 0.4; // forward-back tilt
-        }
-      });
-    }
-  }
-
-  // Enable gyro on touch (mobile)
-  canvas.addEventListener('touchstart', enableGyro, { once: true });
-  canvas.addEventListener('click', enableGyro, { once: true });
-
-  // ─── Mouse parallax on avatar group ──
   let mx = 0, my = 0;
   document.addEventListener('mousemove', (e) => {
     mx = (e.clientX / window.innerWidth - 0.5) * 2;
-    my = -(e.clientY / window.innerHeight - 0.5) * 2;
+    my = (e.clientY / window.innerHeight - 0.5) * 2;
   });
 
-  // Resize
-  window.addEventListener('resize', () => {
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    canvas.width = w; canvas.height = h;
-    renderer.setSize(w, h);
-    camera.aspect = w/h;
-    camera.updateProjectionMatrix();
-  });
-
-  // ─── Animation loop ──
   let t = 0;
   function animate() {
     requestAnimationFrame(animate);
-    t += 0.01;
-
-    // Smooth head tracking
-    currentRotX += (targetRotX - currentRotX) * 0.05;
-    currentRotY += (targetRotY - currentRotY) * 0.05;
-
-    if (avatarGroup.children.length > 0) {
-      avatarGroup.rotation.x = currentRotX;
-      avatarGroup.rotation.y = currentRotY;
-
-      // Gentle floating
-      avatarGroup.position.y = Math.sin(t * 0.8) * 0.08;
+    t += 0.008;
+    const orb = logoWrap.querySelector('.logo-glow-orb');
+    const img = logoWrap.querySelector('.hero-logo-img');
+    if (orb) {
+      orb.style.transform = `translate(${mx * 12}px, ${my * 8}px)`;
+      orb.style.opacity = 0.4 + Math.sin(t) * 0.15;
     }
-
-    // Pulse rings
-    scene.traverse((obj) => {
-      if (obj.geometry && obj.geometry.type === 'TorusGeometry') {
-        if (obj.material && obj.material.opacity !== undefined) {
-          if (obj.geometry.parameters && obj.geometry.parameters.tube === 0.03) {
-            obj.material.opacity = 0.35 + Math.sin(t * 2) * 0.15;
-          }
-        }
-      }
-    });
-
-    renderer.render(scene, camera);
+    if (img) {
+      img.style.transform = `translate(${mx * 6}px, ${my * 4}px)`;
+    }
   }
   animate();
-
 })();
 
 // ══════════════════════════════════════════════════════════════════
