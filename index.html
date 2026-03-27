@@ -28,6 +28,9 @@
   <!-- Three.js Canvas -->
   <canvas id="bg-canvas"></canvas>
 
+  <!-- 3D Logo Scene Canvas (foreground) -->
+  <canvas id="logo-canvas"></canvas>
+
   <!-- Ambient light blobs -->
   <div class="light-blob blob-1" data-speed="0.3"></div>
   <div class="light-blob blob-2" data-speed="0.5"></div>
@@ -40,8 +43,7 @@
   <nav class="nav" id="mainNav">
     <div class="nav-left">
       <a href="#hero" class="nav-logo" data-hover>
-        <span class="logo-text">MYSTIK</span>
-        <span class="logo-dot"></span>
+        <img src="logo.png" alt="Mystik" class="logo-img" id="navLogoImg">
       </a>
     </div>
     <div class="nav-center" id="navLinks">
@@ -81,9 +83,9 @@
       </div>
 
       <div class="hero-title-wrap" id="heroTitle">
-        <h1 class="hero-title" data-morph>
-          <span class="title-line" data-hover-lift>MYSTIK</span>
-        </h1>
+        <div class="hero-logo-3d" id="heroLogo3D">
+          <canvas id="hero-logo-canvas"></canvas>
+        </div>
       </div>
 
       <div class="hero-tagline" id="heroTagline">
