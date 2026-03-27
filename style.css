@@ -463,7 +463,7 @@ img { display: block; max-width: 100%; }
 .marquee-section {
   position: relative;
   z-index: 2;
-  padding: 24px 0;
+  padding: 24px 20px;
   border-top: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
   overflow: hidden;

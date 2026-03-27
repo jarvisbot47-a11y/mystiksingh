@@ -1,6 +1,7 @@
 /* ══════════════════════════════════════════════════════════════════
    MYSTIK — script.js | Premium + 3D Avatar System
    ══════════════════════════════════════════════════════════════════ */
+window.addEventListener('load', function() {
 
 // ─── City Data ───
 const CITIES = [
@@ -396,20 +397,28 @@ function _initLogo3D() {
 // ══════════════════════════════════════════════════════════════════
 (function initCounters() {
   const counters = document.querySelectorAll('.h-stat-num[data-count]');
+  function runCounter(el) {
+    const target = parseInt(el.dataset.count);
+    if (!target) return;
+    const duration = 2000, start = performance.now();
+    function update(now) {
+      const p = Math.min((now-start)/duration,1);
+      el.textContent = Math.floor((1-Math.pow(1-p,3))*target).toLocaleString();
+      if(p<1) requestAnimationFrame(update); else el.textContent=target.toLocaleString();
+    }
+    requestAnimationFrame(update);
+  }
+  // Try IntersectionObserver first
   const obs = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
-      const target = parseInt(entry.target.dataset.count), duration = 2500, start = performance.now();
-      function update(now) {
-        const p = Math.min((now-start)/duration,1);
-        entry.target.textContent = Math.floor((1-Math.pow(1-p,3))*target).toLocaleString();
-        if(p<1) requestAnimationFrame(update); else entry.target.textContent=target.toLocaleString();
-      }
-      requestAnimationFrame(update);
+      runCounter(entry.target);
       obs.unobserve(entry.target);
     });
-  }, { threshold:0.5 });
-  counters.forEach(c => obs.observe(c));
+  }, { threshold:0.1 });
+  counters.forEach(c => { obs.observe(c); runCounter(c); }); // run immediately as fallback
+  // Force run all after 3s no matter what
+  setTimeout(() => counters.forEach(c => runCounter(c)), 3000);
 })();
 
 // ══════════════════════════════════════════════════════════════════
@@ -472,3 +481,4 @@ function _initLogo3D() {
 
 console.log('%c MYSTIK ', 'background:#7c3aed;color:white;font-size:20px;font-weight:bold;padding:8px 20px;border-radius:4px');
 console.log('%cMemento Mori — Remember death. Make music that outlives you.','color:#c084fc');
+\n}); // end window.load
