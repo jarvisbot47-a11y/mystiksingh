@@ -410,11 +410,18 @@ function _initLogo3D() {
 (function initCities() {
   const list = document.getElementById('cityList');
   if (!list) return;
-  const rows = CITIES.map(c => `<div class="city-row"><span class="city-name">${c.name}, ${c.country}</span><span class="city-count">${c.listeners.toLocaleString()}</span></div>`).join('');
-  list.innerHTML = rows + rows; // duplicate for seamless scroll
-  list.classList.add('auto-scroll');
-  list.addEventListener('mouseenter', () => list.style.animationPlayState = 'paused');
-  list.addEventListener('mouseleave', () => list.style.animationPlayState = 'running');
+  list.innerHTML = CITIES.map(c => `<div class="city-row"><span class="city-name">${c.name}, ${c.country}</span><span class="city-count">${c.listeners.toLocaleString()}</span></div>`).join('');
+
+  // Cursor pulse effect — highlight row under mouse
+  list.addEventListener('mousemove', e => {
+    const row = e.target.closest('.city-row');
+    if (!row) return;
+    list.querySelectorAll('.city-row').forEach(r => r.classList.remove('pulsing'));
+    row.classList.add('pulsing');
+  });
+  list.addEventListener('mouseleave', () => {
+    list.querySelectorAll('.city-row').forEach(r => r.classList.remove('pulsing'));
+  });
 })();
 
 // ══════════════════════════════════════════════════════════════════
