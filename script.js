@@ -337,9 +337,11 @@ function _initLogo3D() {
   const cursor = document.getElementById('cursor');
   const follower = document.getElementById('cursorFollower');
   if (!cursor || !follower) return;
-  let cx=0,cy=0,fx=0,fy=0;
-  document.addEventListener('mousemove', e => { cx=e.clientX; cy=e.clientY; });
   if ('ontouchstart' in window) { cursor.style.display='none'; follower.style.display='none'; return; }
+  let cx=window.innerWidth/2, cy=window.innerHeight/2, fx=cx, fy=cy;
+  follower.style.left=fx+'px'; follower.style.top=fy+'px';
+  cursor.style.left=cx+'px'; cursor.style.top=cy+'px';
+  document.addEventListener('mousemove', e => { cx=e.clientX; cy=e.clientY; });
   function a() { fx+=(cx-fx)*0.15; fy+=(cy-fy)*0.15; follower.style.left=fx+'px'; follower.style.top=fy+'px'; cursor.style.left=cx+'px'; cursor.style.top=cy+'px'; requestAnimationFrame(a); }
   a();
   document.querySelectorAll('a,button,[data-hover],[data-tilt]').forEach(el => {
