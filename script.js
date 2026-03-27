@@ -395,32 +395,13 @@ function _initLogo3D() {
 })();
 
 // ══════════════════════════════════════════════════════════════════
-// 8. COUNTER ANIMATION
+// 8. STAT COUNTERS — set numbers immediately
 // ══════════════════════════════════════════════════════════════════
 (function initCounters() {
-  const counters = document.querySelectorAll('.h-stat-num[data-count]');
-  function runCounter(el) {
-    const target = parseInt(el.dataset.count);
-    if (!target) return;
-    const duration = 2000, start = performance.now();
-    function update(now) {
-      const p = Math.min((now-start)/duration,1);
-      el.textContent = Math.floor((1-Math.pow(1-p,3))*target).toLocaleString();
-      if(p<1) requestAnimationFrame(update); else el.textContent=target.toLocaleString();
-    }
-    requestAnimationFrame(update);
-  }
-  // Try IntersectionObserver first
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      runCounter(entry.target);
-      obs.unobserve(entry.target);
-    });
-  }, { threshold:0.1 });
-  counters.forEach(c => { obs.observe(c); runCounter(c); }); // run immediately as fallback
-  // Force run all after 3s no matter what
-  setTimeout(() => counters.forEach(c => runCounter(c)), 3000);
+  document.querySelectorAll('.h-stat-num[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count, 10);
+    if (target) el.textContent = target.toLocaleString();
+  });
 })();
 
 // ══════════════════════════════════════════════════════════════════
