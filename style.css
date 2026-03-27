@@ -742,7 +742,27 @@ img { display: block; max-width: 100%; }
   color: var(--text-2);
 }
 .panel-sub { font-weight: 400; color: var(--text-3); letter-spacing: 0; }
-.city-list { display: flex; flex-direction: column; gap: 6px; }
+.city-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(192,132,252,0.3) transparent;
+}
+.city-list::-webkit-scrollbar { width: 3px; }
+.city-list::-webkit-scrollbar-track { background: transparent; }
+.city-list::-webkit-scrollbar-thumb { background: rgba(192,132,252,0.3); border-radius: 2px; }
+
+/* City list auto-scroll animation */
+@keyframes cityScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(calc(-100% + 220px)); }
+}
+.city-list.auto-scroll {
+  animation: cityScroll 20s linear infinite;
+}
 .city-row {
   display: flex;
   justify-content: space-between;

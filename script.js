@@ -409,7 +409,12 @@ function _initLogo3D() {
 // ══════════════════════════════════════════════════════════════════
 (function initCities() {
   const list = document.getElementById('cityList');
-  if (list) list.innerHTML = CITIES.map(c => `<div class="city-row"><span class="city-name">${c.name}, ${c.country}</span><span class="city-count">${c.listeners.toLocaleString()}</span></div>`).join('');
+  if (!list) return;
+  const rows = CITIES.map(c => `<div class="city-row"><span class="city-name">${c.name}, ${c.country}</span><span class="city-count">${c.listeners.toLocaleString()}</span></div>`).join('');
+  list.innerHTML = rows + rows; // duplicate for seamless scroll
+  list.classList.add('auto-scroll');
+  list.addEventListener('mouseenter', () => list.style.animationPlayState = 'paused');
+  list.addEventListener('mouseleave', () => list.style.animationPlayState = 'running');
 })();
 
 // ══════════════════════════════════════════════════════════════════
