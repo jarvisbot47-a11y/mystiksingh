@@ -156,7 +156,7 @@ function _initLogo3D() {
   // Extruded text layers (creates depth illusion)
   const loader = new THREE.TextureLoader();
   loader.load(
-    'logo-3d.jpg',
+    'logo-3d.png',
     (tex) => {
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
