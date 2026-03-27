@@ -66,7 +66,7 @@ gsap.registerPlugin(ScrollTrigger);
 // ══════════════════════════════════════════════════════════════════
 // 2. 3D AVATAR — Head tracking with mouse + optional gyroscope
 // ══════════════════════════════════════════════════════════════════
-// 3. HERO LOGO — 3D text logo with MystiK singh glow
+// 3. HERO LOGO — 3D text with depth layers
 // ══════════════════════════════════════════════════════════════════
 (function initLogo3D() {
   const canvas = document.getElementById('hero-logo-canvas');
@@ -88,70 +88,162 @@ gsap.registerPlugin(ScrollTrigger);
   camera.position.z = 5;
 
   // Lights
-  scene.add(new THREE.AmbientLight(0x7c3aed, 0.6));
-  const keyLight = new THREE.DirectionalLight(0xfff8e7, 1.2);
-  keyLight.position.set(2, 3, 5);
+  const ambient = new THREE.AmbientLight(0x7c3aed, 0.8);
+  scene.add(ambient);
+  const keyLight = new THREE.DirectionalLight(0xfff8e7, 1.5);
+  keyLight.position.set(2, 4, 5);
   scene.add(keyLight);
-  const fillLight = new THREE.PointLight(0xc084fc, 0.8, 15);
-  fillLight.position.set(-3, 0, 3);
+  const fillLight = new THREE.PointLight(0xc084fc, 1.0, 15);
+  fillLight.position.set(-4, 0, 3);
   scene.add(fillLight);
+  const rimLight = new THREE.PointLight(0x4fc3f7, 0.5, 10);
+  rimLight.position.set(0, -3, -2);
+  scene.add(rimLight);
 
   const group = new THREE.Group();
   scene.add(group);
 
-  // ── Load logo texture ──
-  const loader = new THREE.TextureLoader();
+  // ── Build depth layers (back → front) ──
+  const TAN = 0xb88a58;
+  const PURPLE = 0xc084fc;
+  const DEPTH = 0.35;
 
+  // Back glow plate
+  const plateBack = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.2, 1.6),
+    new THREE.MeshBasicMaterial({
+      color: 0x0a0510,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide,
+    })
+  );
+  plateBack.position.z = -DEPTH * 1.5;
+  group.add(plateBack);
+
+  // Purple edge glow (back)
+  const edgeMat = new THREE.MeshBasicMaterial({
+    color: PURPLE,
+    transparent: true,
+    opacity: 0.2,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const edgeBack = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.8), edgeMat);
+  edgeBack.position.z = -DEPTH * 2.0;
+  group.add(edgeBack);
+  group.userData.edgeBack = edgeBack;
+
+  // Extruded text layers (creates depth illusion)
+  const loader = new THREE.TextureLoader();
   loader.load(
-    'logo.png',
+    'text-only-logo.png',
     (tex) => {
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
       tex.format = THREE.RGBAFormat;
 
-      // Main logo plane
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.01 });
-      const aspect = tex.image ? tex.image.width / tex.image.height : 1;
-      const geo = new THREE.PlaneGeometry(aspect * 2.2, 2.2);
-      const mesh = new THREE.Mesh(geo, mat);
-      group.add(mesh);
+      const aspect = 497 / 309; // from our generated image
 
-      // Glow layer behind — soft purple bloom
-      const glowMat = new THREE.MeshBasicMaterial({
-        color: 0xb88a58,
+      // Build layered planes (8 layers for depth)
+      const layerCount = 9;
+      for (let i = 0; i < layerCount; i++) {
+        const t_norm = i / (layerCount - 1); // 0 = back, 1 = front
+        const z = -DEPTH * (1 - t_norm) * 1.2;
+        const scale = 1.0 + t_norm * 0.0;
+
+        let mat;
+        if (i === layerCount - 1) {
+          // Front layer — full color
+          mat = new THREE.MeshStandardMaterial({
+            map: tex,
+            transparent: true,
+            alphaTest: 0.01,
+            emissive: new THREE.Color(TAN).multiplyScalar(0.08),
+            emissiveIntensity: 0.5,
+            roughness: 0.4,
+            metalness: 0.15,
+            side: THREE.DoubleSide,
+          });
+        } else {
+          // Shadow layers behind — darkening
+          const darkness = 0.15 + t_norm * 0.5;
+          mat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: darkness,
+            alphaTest: 0.01,
+            blending: THREE.NormalBlending,
+            depthWrite: false,
+          });
+        }
+
+        const geo = new THREE.PlaneGeometry(aspect * 2.5, 2.5 * scale);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.z = z;
+        group.add(mesh);
+      }
+
+      // Front glass sheen
+      const sheenMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.04,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-      const glowGeo = new THREE.PlaneGeometry(aspect * 2.5, 2.5);
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.z = -0.1;
-      group.add(glow);
+      const sheenGeo = new THREE.PlaneGeometry(aspect * 2.5, 2.5);
+      const sheen = new THREE.Mesh(sheenGeo, sheenMat);
+      sheen.position.z = 0.02;
+      group.add(sheen);
 
       // Outer glow ring
-      const ringGeo = new THREE.TorusGeometry(1.5, 0.03, 8, 80);
+      const ringGeo = new THREE.TorusGeometry(1.6, 0.035, 8, 80);
       const ringMat = new THREE.MeshBasicMaterial({
-        color: 0xc084fc,
+        color: PURPLE,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.45,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.z = -0.15;
+      ring.position.z = -0.05;
       group.add(ring);
       group.userData.ring = ring;
-      group.userData.glowMat = glowMat;
     },
     undefined,
     () => {
-      // Fallback — just a dark panel
-      const geo = new THREE.PlaneGeometry(2, 1);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-      group.add(new THREE.Mesh(geo, mat));
+      // Fallback — dark rectangle
+      const geo = new THREE.BoxGeometry(2, 0.8, 0.1);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x1a0a05, roughness: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      group.add(mesh);
     }
   );
+
+  // ── Floating particles ──
+  const particleCount = 60;
+  const particlePos = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const r = 1.2 + Math.random() * 1.5;
+    particlePos[i * 3] = Math.cos(theta) * r;
+    particlePos[i * 3 + 1] = (Math.random() - 0.5) * 2;
+    particlePos[i * 3 + 2] = (Math.random() - 0.5) * 1.5 - 1;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: PURPLE,
+    size: 0.025,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  scene.add(particles);
+  group.userData.particles = particles;
 
   // ── Mouse parallax ──
   let targetX = 0, targetY = 0;
@@ -175,18 +267,30 @@ gsap.registerPlugin(ScrollTrigger);
   function animate() {
     requestAnimationFrame(animate);
     t += 0.012;
-    currentX += (targetX - currentX) * 0.05;
-    currentY += (targetY - currentY) * 0.05;
-    group.rotation.y = currentX * 0.2;
-    group.rotation.x = -currentY * 0.12;
-    group.position.y = Math.sin(t * 0.6) * 0.04;
+
+    currentX += (targetX - currentX) * 0.04;
+    currentY += (targetY - currentY) * 0.04;
+
+    // 3D rotation with parallax
+    group.rotation.y = currentX * 0.25;
+    group.rotation.x = -currentY * 0.18;
+
+    // Gentle float
+    group.position.y = Math.sin(t * 0.7) * 0.05;
+
+    // Ring pulse
     if (group.userData.ring) {
-      group.userData.ring.rotation.z = t * 0.3;
+      group.userData.ring.rotation.z = t * 0.25;
       group.userData.ring.material.opacity = 0.3 + Math.sin(t * 1.5) * 0.2;
+      group.userData.ring.rotation.x = Math.sin(t * 0.5) * 0.1;
+      group.userData.ring.rotation.y = Math.cos(t * 0.3) * 0.1;
     }
-    if (group.userData.glowMat) {
-      group.userData.glowMat.opacity = 0.12 + Math.sin(t) * 0.06;
+
+    // Particle drift
+    if (group.userData.particles) {
+      group.userData.particles.rotation.y = t * 0.05;
     }
+
     renderer.render(scene, camera);
   }
   animate();
