@@ -66,31 +66,270 @@ gsap.registerPlugin(ScrollTrigger);
 // ══════════════════════════════════════════════════════════════════
 // 2. 3D AVATAR — Head tracking with mouse + optional gyroscope
 // ══════════════════════════════════════════════════════════════════
-// 3. HERO LOGO — Clean glow animation
+// 3. HERO AVATAR — 3D stylized bust with blonde dreads
 // ══════════════════════════════════════════════════════════════════
-(function initHeroLogo() {
-  const logoWrap = document.getElementById('heroLogoWrap');
-  if (!logoWrap) return;
+(function init3DAvatar() {
+  const canvas = document.getElementById('hero-logo-canvas');
+  if (!canvas || !window.THREE) return;
+  const container = document.getElementById('heroLogo3D');
+  if (!container) return;
 
-  let mx = 0, my = 0;
-  document.addEventListener('mousemove', (e) => {
-    mx = (e.clientX / window.innerWidth - 0.5) * 2;
-    my = (e.clientY / window.innerHeight - 0.5) * 2;
+  const w = container.clientWidth || 500;
+  const h = container.clientHeight || 500;
+  canvas.width = w; canvas.height = h;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.z = 5.5;
+
+  // ── Lighting ──
+  const ambientLight = new THREE.AmbientLight(0x7c3aed, 0.5);
+  scene.add(ambientLight);
+  const spotLight = new THREE.SpotLight(0xfff8e7, 2.5, 20, Math.PI / 5, 0.4, 1);
+  spotLight.position.set(1, 4, 5);
+  scene.add(spotLight);
+  const fillLight = new THREE.PointLight(0x4fc3f7, 0.8, 15);
+  fillLight.position.set(-4, 0, 2);
+  scene.add(fillLight);
+  const rimLight = new THREE.PointLight(0xc084fc, 0.6, 10);
+  rimLight.position.set(0, -1, -3);
+  scene.add(rimLight);
+
+  // ── Avatar Group ──
+  const avatarGroup = new THREE.Group();
+  scene.add(avatarGroup);
+
+  // Skin material
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: 0x3d1f10,
+    roughness: 0.55,
+    metalness: 0.05,
   });
 
+  // Dark hoodie material
+  const hoodieMat = new THREE.MeshStandardMaterial({
+    color: 0x111111,
+    roughness: 0.8,
+    metalness: 0.0,
+  });
+
+  // ── Head ──
+  const headGeo = new THREE.SphereGeometry(1.0, 64, 64);
+  const pos = headGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    // jaw + chin narrowing
+    if (y < 0.2) { x *= 1.0 - Math.max(0, -y * 0.4); z *= 1.0 - Math.max(0, -y * 0.3); }
+    // brow ridge
+    if (y > 0.3 && y < 0.65 && z > 0) { pos.setZ(i, z + 0.05); }
+    // cheekbones
+    if (y > -0.3 && y < 0.2 && Math.abs(x) > 0.5) { pos.setZ(i, z * 1.05); }
+    // narrow nose bridge
+    if (y > -0.2 && y < 0.3 && Math.abs(x) < 0.15) { pos.setX(i, x * 0.7); }
+    // top of head slightly flatter
+    if (y > 0.8) { pos.setY(i, y * 0.9 + 0.1); }
+    pos.setXYZ(i, x, y, z);
+  }
+  headGeo.computeVertexNormals();
+  const head = new THREE.Mesh(headGeo, skinMat);
+  head.position.y = 0.3;
+  avatarGroup.add(head);
+
+  // ── Neck ──
+  const neckGeo = new THREE.CylinderGeometry(0.38, 0.42, 0.6, 32);
+  const neck = new THREE.Mesh(neckGeo, skinMat);
+  neck.position.y = -0.75;
+  avatarGroup.add(neck);
+
+  // ── Shoulders / Hoodie ──
+  const shoulderGeo = new THREE.SphereGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.6);
+  const shoulders = new THREE.Mesh(shoulderGeo, hoodieMat);
+  shoulders.position.y = -1.1;
+  avatarGroup.add(shoulders);
+
+  // Hoodie hood (behind head)
+  const hoodGeo = new THREE.SphereGeometry(1.15, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5);
+  const hood = new THREE.Mesh(hoodGeo, hoodieMat);
+  hood.position.set(0, 0.2, -0.15);
+  hood.rotation.x = 0.2;
+  avatarGroup.add(hood);
+
+  // ── Blonde Dreads ──
+  const dreadMat = new THREE.MeshStandardMaterial({
+    color: 0xf5c842,   // golden blonde
+    roughness: 0.75,
+    metalness: 0.05,
+  });
+  const darkDreadMat = new THREE.MeshStandardMaterial({
+    color: 0xc8a028,   // darker blonde variant
+    roughness: 0.8,
+    metalness: 0.02,
+  });
+
+  // Dreadlock positions — ring around the head, pointing outward + down
+  const dreadData = [
+    // [angle deg, y_start, length, radius_mult, dark]
+    [0,   0.85, 1.6, 0.09, false],
+    [22,  0.9,  1.5, 0.08, false],
+    [45,  0.9,  1.4, 0.085, false],
+    [67,  0.85, 1.5, 0.08, false],
+    [90,  0.8,  1.55, 0.09, true],
+    [112, 0.85, 1.45, 0.08, false],
+    [135, 0.88, 1.35, 0.085, false],
+    [157, 0.9,  1.5, 0.08, true],
+    [180, 0.85, 1.6, 0.09, false],
+    [202, 0.9,  1.5, 0.08, false],
+    [225, 0.88, 1.4, 0.085, true],
+    [247, 0.85, 1.5, 0.08, false],
+    [270, 0.8,  1.55, 0.09, false],
+    [292, 0.85, 1.45, 0.08, true],
+    [315, 0.88, 1.35, 0.085, false],
+    [337, 0.9,  1.5, 0.08, false],
+    // second row
+    [10,  0.6,  1.3, 0.07, false],
+    [50,  0.6,  1.25, 0.07, true],
+    [80,  0.6,  1.3, 0.07, false],
+    [100, 0.6,  1.28, 0.07, false],
+    [130, 0.6,  1.3, 0.07, true],
+    [160, 0.6,  1.25, 0.07, false],
+    [190, 0.6,  1.3, 0.07, false],
+    [220, 0.6,  1.28, 0.07, true],
+    [260, 0.6,  1.3, 0.07, false],
+    [290, 0.6,  1.25, 0.07, false],
+    [320, 0.6,  1.3, 0.07, true],
+    [350, 0.6,  1.28, 0.07, false],
+    // third row (shorter, top)
+    [0,   1.05, 0.9,  0.06, false],
+    [40,  1.05, 0.85, 0.06, true],
+    [80,  1.05, 0.9,  0.06, false],
+    [120, 1.05, 0.88, 0.06, false],
+    [160, 1.05, 0.85, 0.06, true],
+    [200, 1.05, 0.9,  0.06, false],
+    [240, 1.05, 0.88, 0.06, false],
+    [280, 1.05, 0.85, 0.06, true],
+    [320, 1.05, 0.9,  0.06, false],
+    [360, 1.05, 0.88, 0.06, false],
+  ];
+
+  const matChoices = [dreadMat, darkDreadMat];
+
+  for (const [angleDeg, yStart, length, rMult, dark] of dreadData) {
+    const rad = (angleDeg * Math.PI) / 180;
+    const r = 1.02 + (1.0 - yStart) * 0.05; // slightly wider at lower y
+    const dx = Math.sin(rad) * r;
+    const dz = Math.cos(rad) * r;
+
+    // Slight random variation
+    const jitter = 0.03;
+    const rx = dx + (Math.random() - 0.5) * jitter;
+    const rz = dz + (Math.random() - 0.5) * jitter;
+    const ry = yStart + (Math.random() - 0.5) * 0.05;
+
+    const dreadGeo = new THREE.CylinderGeometry(0.04 * rMult * 60, 0.055 * rMult * 60, length, 8);
+    const dread = new THREE.Mesh(dreadGeo, matChoices[dark ? 1 : 0]);
+    dread.position.set(rx * 0.95, ry - length * 0.4, rz * 0.95);
+
+    // Tilt dreads outward and down
+    const tiltZ = -Math.cos(rad) * 0.3;
+    const tiltX = Math.sin(rad) * 0.3;
+    dread.rotation.x = 0.15 + tiltX;
+    dread.rotation.z = tiltZ;
+
+    avatarGroup.add(dread);
+  }
+
+  // ── Ears ──
+  for (const side of [-1, 1]) {
+    const earGeo = new THREE.SphereGeometry(0.14, 16, 16);
+    earGeo.scale(0.6, 1.2, 0.5);
+    const ear = new THREE.Mesh(earGeo, skinMat);
+    ear.position.set(side * 0.95, 0.2, 0.05);
+    avatarGroup.add(ear);
+  }
+
+  // ── Floor glow ring ──
+  const ringGeo = new THREE.TorusGeometry(1.1, 0.025, 16, 100);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xc084fc,
+    transparent: true,
+    opacity: 0.5,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = -1.6;
+  avatarGroup.add(ring);
+
+  // Second ring
+  const ring2Geo = new THREE.TorusGeometry(1.4, 0.015, 16, 100);
+  const ring2Mat = new THREE.MeshBasicMaterial({
+    color: 0x7c3aed,
+    transparent: true,
+    opacity: 0.3,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+  ring2.rotation.x = Math.PI / 2;
+  ring2.position.y = -1.6;
+  avatarGroup.add(ring2);
+
+  // ── Glow orb behind ──
+  const orbGeo = new THREE.SphereGeometry(2.0, 32, 32);
+  const orbMat = new THREE.MeshBasicMaterial({
+    color: 0x7c3aed,
+    transparent: true,
+    opacity: 0.08,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const orb = new THREE.Mesh(orbGeo, orbMat);
+  orb.position.set(0, 0, -1.5);
+  avatarGroup.add(orb);
+
+  // ── Mouse tracking ──
+  let targetX = 0, targetY = 0;
+  let currentX = 0, currentY = 0;
+  document.addEventListener('mousemove', (e) => {
+    targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+    targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // ── Resize ──
+  window.addEventListener('resize', () => {
+    const nw = container.clientWidth;
+    const nh = container.clientHeight;
+    canvas.width = nw; canvas.height = nh;
+    renderer.setSize(nw, nh);
+    camera.aspect = nw / nh;
+    camera.updateProjectionMatrix();
+  });
+
+  // ── Animate ──
   let t = 0;
   function animate() {
     requestAnimationFrame(animate);
-    t += 0.008;
-    const orb = logoWrap.querySelector('.logo-glow-orb');
-    const img = logoWrap.querySelector('.hero-logo-img');
-    if (orb) {
-      orb.style.transform = `translate(${mx * 12}px, ${my * 8}px)`;
-      orb.style.opacity = 0.4 + Math.sin(t) * 0.15;
-    }
-    if (img) {
-      img.style.transform = `translate(${mx * 6}px, ${my * 4}px)`;
-    }
+    t += 0.01;
+
+    currentX += (targetX - currentX) * 0.04;
+    currentY += (targetY - currentY) * 0.04;
+
+    avatarGroup.rotation.y = currentX * 0.35;
+    avatarGroup.rotation.x = -currentY * 0.2;
+    avatarGroup.position.y = Math.sin(t * 0.8) * 0.05;
+
+    // Pulse rings
+    ring.material.opacity = 0.4 + Math.sin(t * 1.5) * 0.2;
+    ring2.material.opacity = 0.2 + Math.sin(t * 1.5 + 1) * 0.15;
+
+    renderer.render(scene, camera);
   }
   animate();
 })();
