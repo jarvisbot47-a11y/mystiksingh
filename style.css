@@ -136,7 +136,6 @@ img { display: block; max-width: 100%; }
   z-index: 9999;
   transform: translate(-50%, -50%);
   transition: width 0.15s, height 0.15s, background 0.15s;
-  mix-blend-mode: screen;
   will-change: transform;
   opacity: 1;
   visibility: visible;
