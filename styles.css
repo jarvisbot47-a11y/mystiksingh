@@ -103,22 +103,23 @@ body::after {
   background: rgba(3, 3, 8, 0.85);
   backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  border-radius: 50px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--glass-border);
   box-shadow: var(--glow-cyan), inset 0 0 30px rgba(0, 229, 255, 0.05);
 }
 
 .tron-nav a {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
   color: var(--text-secondary);
   text-decoration: none;
-  padding: 8px 18px;
-  border-radius: 30px;
+  padding: 18px 16px;
   transition: all 0.3s ease;
-  position: relative;
+  border-right: 1px solid rgba(0, 229, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .tron-nav a:hover,
@@ -147,8 +148,9 @@ body::after {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 120px 20px 80px;
+  padding: 100px 20px 80px;
   overflow: hidden;
+  padding-top: calc(60px + 2rem);
 }
 
 .hero-bg-glow {
